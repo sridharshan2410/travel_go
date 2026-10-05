@@ -1,0 +1,44 @@
+{
+  "packages": [
+    {
+      "id": 101,
+      "name": "Goa Beach Escape",
+      "destination": "Goa",
+      "duration": 3,
+      "price": 12000,
+      "rating": 4.7,
+      "availability": 10,
+      "image": "/images/goa.jpg"
+    },
+    {
+      "id": 102,
+      "name": "Ooty Hill Station",
+      "destination": "Ooty",
+      "duration": 4,
+      "price": 9000,
+      "rating": 4.5,
+      "availability": 8,
+      "image": "/images/ooty.jpg"
+    },
+    {
+      "id": 103,
+      "name": "Kerala Backwaters",
+      "destination": "Kerala",
+      "duration": 5,
+      "price": 15000,
+      "rating": 4.8,
+      "availability": 12,
+      "image": "/images/kerala.jpg"
+    },
+    {
+      "id": 104,
+      "name": "Manali Adventure",
+      "destination": "Manali",
+      "duration": 6,
+      "price": 18000,
+      "rating": 4.6,
+      "availability": 6,
+      "image": "/images/manali.jpg"
+    }
+  ]
+}
