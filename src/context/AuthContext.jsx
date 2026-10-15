@@ -14,7 +14,10 @@ import {
 
 const AuthContext = createContext();
 
-const API_URL = "http://127.0.0.1:3001";
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://travel-go-rmtr.onrender.com"
+).replace(/\/+$/, "");
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -27,13 +30,9 @@ export function AuthProvider({ children }) {
     () => localStorage.getItem("loggedUser") || ""
   );
 
-  // Handle invalid or expired sessions
   useEffect(() => {
     const handleUnauthorized = () => {
       removeToken();
-      localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("loggedUser");
-
       setIsAuthenticated(false);
       setLoggedUser("");
     };
@@ -51,17 +50,18 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // SIGNUP: Save a new user through JSON Server
+  // SIGNUP
   const signup = async (userData) => {
     try {
+      const email = userData.email.trim().toLowerCase();
+
       const response = await fetch(`${API_URL}/users`);
 
       if (!response.ok) {
-        throw new Error("Unable to check registered users.");
+        throw new Error("Unable to retrieve users.");
       }
 
       const users = await response.json();
-      const email = userData.email.trim().toLowerCase();
 
       const emailExists = users.some(
         (user) => user.email?.toLowerCase() === email
@@ -88,27 +88,8 @@ export function AuthProvider({ children }) {
       });
 
       if (!createResponse.ok) {
-        throw new Error("Unable to create your account.");
+        throw new Error("Unable to create account.");
       }
-
-      const savedUser = await createResponse.json();
-
-      // Keep compatibility with the existing demo login flow
-      const existingUsers = JSON.parse(
-        localStorage.getItem("travelUsers") || "[]"
-      );
-
-      existingUsers.push({
-        name: savedUser.name,
-        email: savedUser.email,
-        phone: savedUser.phone,
-        password: userData.password,
-      });
-
-      localStorage.setItem(
-        "travelUsers",
-        JSON.stringify(existingUsers)
-      );
 
       return {
         success: true,
@@ -120,18 +101,18 @@ export function AuthProvider({ children }) {
       return {
         success: false,
         message:
-          "Unable to connect to the API. Make sure JSON Server is running.",
+          "Unable to connect to the API. Please check the backend URL and server status.",
       };
     }
   };
 
-  // LOGIN: Verify credentials using the JSON Server API
+  // LOGIN
   const login = async (username, password) => {
     try {
       const response = await fetch(`${API_URL}/users`);
 
       if (!response.ok) {
-        throw new Error("Unable to retrieve users from the API.");
+        throw new Error("Unable to retrieve users.");
       }
 
       const users = await response.json();
@@ -146,12 +127,9 @@ export function AuthProvider({ children }) {
           item.password === password
       );
 
-      if (!user) {
-        return false;
-      }
+      if (!user) return false;
 
-      // Create the demo token after successful credential verification
-      createDemoToken(user.email);
+      createDemoToken(user.email || user.name);
 
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("loggedUser", user.name);
@@ -166,13 +144,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // LOGOUT: Remove the token and login details
+  // LOGOUT
   const logout = () => {
     removeToken();
-
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("loggedUser");
-
     setIsAuthenticated(false);
     setLoggedUser("");
   };
