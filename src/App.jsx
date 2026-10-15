@@ -31,7 +31,7 @@ const BookingsPage = lazy(() => import("./pages/BookingsPage"));
 function App() {
   return (
     <Provider store={store}>
-      <BrowserRouter>
+      <BrowserRouter basename="/travel_go">
         <ErrorBoundary>
           <AuthProvider>
             <BookingProvider>
