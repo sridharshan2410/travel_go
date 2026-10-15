@@ -2,35 +2,43 @@ import React from "react";
 
 function SearchBar({ searchTerm, setSearchTerm }) {
   return (
-    <div className="professional-search">
-
-      <div className="search-icon">
+    <form
+      className="professional-search"
+      role="search"
+      onSubmit={(e) => e.preventDefault()}
+    >
+      <span className="search-icon" aria-hidden="true">
         🔍
-      </div>
+      </span>
+
+      <label className="sr-only" htmlFor="travel-package-search">
+        Search destination or travel package
+      </label>
 
       <input
-        type="text"
+        id="travel-package-search"
+        type="search"
         placeholder="Search destination or travel package..."
         value={searchTerm}
-        onChange={(e) =>
-          setSearchTerm(e.target.value)
-        }
+        onChange={(e) => setSearchTerm(e.target.value)}
+        autoComplete="off"
       />
 
       {searchTerm && (
         <button
+          type="button"
           className="clear-search"
+          aria-label="Clear search"
           onClick={() => setSearchTerm("")}
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
       )}
 
-      <button className="search-button">
+      <button type="submit" className="search-button">
         Search
       </button>
-
-    </div>
+    </form>
   );
 }
 

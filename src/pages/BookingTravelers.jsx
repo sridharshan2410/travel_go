@@ -3,298 +3,235 @@ import { useNavigate } from "react-router-dom";
 import { useBookingContext } from "../context/BookingContext";
 
 function BookingTravelers() {
-
   const navigate = useNavigate();
 
   const {
-    cart,
+    cartItems,
     traveler,
     setTraveler,
     travelers,
-    updateTravelers
+    updateTravelers,
   } = useBookingContext();
-
 
   const [errors, setErrors] = useState({});
 
-
   const validateForm = () => {
-
     const newErrors = {};
 
-
-    // Package validation
-
-    if (!cart || cart.length === 0) {
-
-      newErrors.package =
-        "Please select at least one travel package";
-
+    if (!cartItems || cartItems.length === 0) {
+      newErrors.package = "Please select at least one travel package.";
     }
 
+    const name = (traveler.name || "").trim();
+    const email = (traveler.email || "").trim();
+    const phone = (traveler.phone || "").trim();
 
-    // Name validation
-
-    if (!traveler.name.trim()) {
-
-      newErrors.name =
-        "Traveler name is required";
-
-    }
-    else if (!/^[A-Za-z ]+$/.test(traveler.name)) {
-
-      newErrors.name =
-        "Name should contain only letters";
-
-    }
-    else if (traveler.name.trim().length < 3) {
-
-      newErrors.name =
-        "Name must contain at least 3 characters";
-
+    if (!name) {
+      newErrors.name = "Traveler name is required.";
+    } else if (!/^[A-Za-z ]+$/.test(name)) {
+      newErrors.name = "Name should contain only letters and spaces.";
+    } else if (name.length < 3) {
+      newErrors.name = "Name must contain at least 3 characters.";
     }
 
-
-    // Email validation
-
-    if (!traveler.email.trim()) {
-
-      newErrors.email =
-        "Email is required";
-
+    if (!email) {
+      newErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Enter a valid email address.";
     }
-    else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        traveler.email
-      )
+
+    if (!phone) {
+      newErrors.phone = "Phone number is required.";
+    } else if (!/^[0-9]{10}$/.test(phone)) {
+      newErrors.phone = "Phone number must contain exactly 10 digits.";
+    }
+
+    const travelerCount = Number(travelers);
+
+    if (
+      travelers === "" ||
+      travelers === null ||
+      travelers === undefined ||
+      !Number.isInteger(travelerCount)
     ) {
-
-      newErrors.email =
-       "Enter a valid email address";
-
+      newErrors.travelers = "Enter a valid number of travelers.";
+    } else if (travelerCount < 1 || travelerCount > 20) {
+      newErrors.travelers = "Travelers must be between 1 and 20.";
     }
-
-
-    // Phone validation
-
-    if (!traveler.phone.trim()) {
-
-      newErrors.phone =
-        "Phone number is required";
-
-    }
-    else if (!/^[0-9]{10}$/.test(traveler.phone)) {
-
-      newErrors.phone =
-        "Phone number must contain exactly 10 digits";
-
-    }
-
-
-    // Travelers validation
-
-    if (!travelers) {
-
-      newErrors.travelers =
-        "Number of travelers is required";
-
-    }
-    else if (
-      travelers < 1 ||
-      travelers > 20
-    ) {
-
-      newErrors.travelers =
-        "Travelers must be between 1 and 20";
-
-    }
-
 
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
-
   };
-
 
   const handleSubmit = (e) => {
-
     e.preventDefault();
 
-
     if (!validateForm()) {
-
       return;
-
     }
 
-
     navigate("/booking/summary");
-
   };
 
+  const updateTravelerField = (field, value) => {
+    setTraveler({
+      ...traveler,
+      [field]: value,
+    });
+
+    setErrors((previous) => ({
+      ...previous,
+      [field]: "",
+    }));
+  };
 
   return (
-
-    <div className="section">
-
+    <main className="section">
       <h1>👤 Traveler Information</h1>
 
+      <div role="alert" aria-live="assertive">
+        {errors.package && <p className="error">{errors.package}</p>}
+      </div>
 
-      {errors.package && (
+      {cartItems && cartItems.length > 0 && (
+        <section
+          className="selected-package"
+          aria-labelledby="selected-package-heading"
+        >
+          <h2 id="selected-package-heading">Selected Travel Package</h2>
 
-        <p className="error">
-          {errors.package}
-        </p>
-
+          {cartItems.map((item) => (
+            <p key={item.id}>🌍 {item.name}</p>
+          ))}
+        </section>
       )}
-
 
       <form
         className="traveler-form"
         onSubmit={handleSubmit}
+        noValidate
       >
-
-
-        {/* NAME */}
-
         <div className="form-group">
-
-          <label>
-            Traveler Name
-          </label>
+          <label htmlFor="travelerName">Traveler Name</label>
 
           <input
+            id="travelerName"
+            name="name"
             type="text"
+            autoComplete="name"
             placeholder="Enter your full name"
-            value={traveler.name}
-            onChange={(e) =>
-              setTraveler({
-                ...traveler,
-                name: e.target.value
-              })
-            }
+            value={traveler.name || ""}
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "travelerName-error" : undefined}
+            onChange={(e) => updateTravelerField("name", e.target.value)}
           />
 
           {errors.name && (
-
-            <p className="error">
+            <p id="travelerName-error" className="error" role="alert">
               {errors.name}
             </p>
-
           )}
-
         </div>
 
-
-        {/* EMAIL */}
-
         <div className="form-group">
-
-          <label>
-            Email
-          </label>
+          <label htmlFor="travelerEmail">Email</label>
 
           <input
+            id="travelerEmail"
+            name="email"
             type="email"
+            autoComplete="email"
             placeholder="Enter your email"
-            value={traveler.email}
-            onChange={(e) =>
-              setTraveler({
-                ...traveler,
-                email: e.target.value
-              })
-            }
+            value={traveler.email || ""}
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "travelerEmail-error" : undefined}
+            onChange={(e) => updateTravelerField("email", e.target.value)}
           />
 
           {errors.email && (
-
-            <p className="error">
+            <p id="travelerEmail-error" className="error" role="alert">
               {errors.email}
             </p>
-
           )}
-
         </div>
 
-
-        {/* PHONE */}
-
         <div className="form-group">
-
-          <label>
-            Phone Number
-          </label>
+          <label htmlFor="travelerPhone">Phone Number</label>
 
           <input
+            id="travelerPhone"
+            name="phone"
             type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={10}
             placeholder="Enter 10 digit phone number"
-            value={traveler.phone}
+            value={traveler.phone || ""}
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "travelerPhone-error" : "travelerPhone-help"}
             onChange={(e) =>
-              setTraveler({
-                ...traveler,
-                phone: e.target.value
-              })
+              updateTravelerField(
+                "phone",
+                e.target.value.replace(/\D/g, "").slice(0, 10)
+              )
             }
           />
 
-          {errors.phone && (
+          <p id="travelerPhone-help" className="form-help">
+            Enter a 10-digit phone number.
+          </p>
 
-            <p className="error">
+          {errors.phone && (
+            <p id="travelerPhone-error" className="error" role="alert">
               {errors.phone}
             </p>
-
           )}
-
         </div>
 
-
-        {/* NUMBER OF TRAVELERS */}
-
         <div className="form-group">
-
-          <label>
-            Number of Travelers
-          </label>
+          <label htmlFor="travelers">Number of Travelers</label>
 
           <input
+            id="travelers"
+            name="travelers"
             type="number"
             min="1"
             max="20"
-            value={travelers}
+            step="1"
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errors.travelers)}
+            aria-describedby={errors.travelers ? "travelers-error" : "travelers-help"}
+            value={travelers ?? 1}
             onChange={(e) =>
-              updateTravelers(e.target.value)
+              updateTravelers(e.target.value === "" ? "" : Number(e.target.value))
             }
           />
 
-          {errors.travelers && (
+          <p id="travelers-help" className="form-help">
+            Choose between 1 and 20 travelers.
+          </p>
 
-            <p className="error">
+          {errors.travelers && (
+            <p id="travelers-error" className="error" role="alert">
               {errors.travelers}
             </p>
-
           )}
-
         </div>
 
-
-        {/* SUBMIT */}
-
-        <button
-          type="submit"
-          className="login-button"
-        >
+        <button type="submit" className="login-button">
           Continue to Summary →
         </button>
-
-
       </form>
-
-    </div>
-
+    </main>
   );
-
 }
-
 
 export default BookingTravelers;

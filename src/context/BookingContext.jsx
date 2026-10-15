@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -21,7 +22,6 @@ import useBookingSearch from "../hooks/useBookingSearch";
 const BookingContext = createContext();
 
 export function BookingProvider({ children }) {
-
   // REST API search state
   const bookingSearch = useBookingSearch();
 
@@ -54,8 +54,7 @@ export function BookingProvider({ children }) {
     dispatch(clearCart());
   };
 
-
-  // Cart derived state
+  // Cart calculations
   const subtotal = cartItems.reduce(
     (total, item) =>
       total + Number(item.price) * item.quantity,
@@ -63,11 +62,9 @@ export function BookingProvider({ children }) {
   );
 
   const tax = subtotal * 0.18;
-
   const total = subtotal + tax;
 
-
-  // Existing booking states
+  // Booking states
   const [selectedPackage, setSelectedPackage] =
     useState(null);
 
@@ -76,47 +73,70 @@ export function BookingProvider({ children }) {
     email: "",
     phone: ""
   });
+  const [travelers, setTravelers] = useState(1);
+
+const updateTravelers = (value) => {
+  setTravelers(value);
+};
 
   const [bookingInfo, setBookingInfo] =
     useState(null);
 
+  // Travel dates: store as YYYY-MM-DD strings
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // Update both dates together
+  const updateTravelDates = (
+    newStartDate,
+    newEndDate
+  ) => {
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+  };
 
   return (
     <BookingContext.Provider
       value={{
-
         // REST API search
         ...bookingSearch,
 
-        // Redux Cart
+        // Redux cart
         cartItems,
-
         addToCart: handleAddToCart,
         removeFromCart: handleRemoveFromCart,
         updateQuantity: handleUpdateQuantity,
         clearCart: handleClearCart,
 
-        // Derived cart values
+        // Cart totals
         subtotal,
         tax,
         total,
 
-        // Booking states
+        // Booking information
         selectedPackage,
         setSelectedPackage,
-
         traveler,
         setTraveler,
-
         bookingInfo,
-        setBookingInfo
+        setBookingInfo,
+
+        // Travel dates
+        startDate,
+        setStartDate,
+        endDate,
+        setEndDate,
+        updateTravelDates,
+
+        travelers,
+        setTravelers,
+        updateTravelers
       }}
     >
       {children}
     </BookingContext.Provider>
   );
 }
-
 
 export function useBookingContext() {
   return useContext(BookingContext);

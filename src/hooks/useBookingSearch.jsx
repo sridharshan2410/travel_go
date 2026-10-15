@@ -11,48 +11,76 @@ function useBookingSearch() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-useEffect(() => {
-  const loadPackages = async () => {
-    try {
-      setLoading(true);
+  // Fetch packages and cancel the request when necessary
+  useEffect(() => {
+    const controller = new AbortController();
 
-      const data = await getPackages();
+    const loadPackages = async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-      // 5 seconds loading delay
-      await new Promise((resolve) =>
-        setTimeout(resolve, 2000)
-      );
+        const data = await getPackages(controller.signal);
 
-      setPackages(data);
-      setError("");
-    } catch (err) {
-      console.error("API Error:", err);
-      setError("Failed to load travel packages.");
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid packages data");
+        }
 
-  loadPackages();
-}, []);
+        setPackages(data);
+      } catch (err) {
+        if (err.name === "AbortError") {
+          return;
+        }
 
+        console.error("API Error:", err);
+        setError("Failed to load travel packages.");;
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPackages();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  // Filter locally without making new API requests
   const filteredPackages = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase();
+
     return packages.filter((pkg) => {
+      const name = String(pkg.name ?? "").toLowerCase();
+      const place = String(
+        pkg.destination ?? pkg.name ?? ""
+      ).toLowerCase();
+
+      const price = Number(pkg.price);
+      const days = Number(pkg.duration);
+      const stars = Number(pkg.rating);
+
       const searchMatch =
-        pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pkg.destination.toLowerCase().includes(searchTerm.toLowerCase());
+        !search ||
+        name.includes(search) ||
+        place.includes(search);
 
       const destinationMatch =
         !destination || pkg.destination === destination;
 
       const budgetMatch =
-        !budget || pkg.price <= Number(budget);
+        !budget ||
+        (Number.isFinite(price) && price <= Number(budget));
 
       const durationMatch =
-        !duration || pkg.duration <= Number(duration);
+        !duration ||
+        (Number.isFinite(days) && days <= Number(duration));
 
       const ratingMatch =
-        !rating || pkg.rating >= Number(rating);
+        !rating ||
+        (Number.isFinite(stars) && stars >= Number(rating));
 
       return (
         searchMatch &&

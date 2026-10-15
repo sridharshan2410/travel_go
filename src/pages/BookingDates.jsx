@@ -6,67 +6,64 @@ function BookingDates() {
   const navigate = useNavigate();
 
   const {
-    cart,
+    cartItems,
     startDate,
     endDate,
-    updateTravelDates
+    updateTravelDates,
   } = useBookingContext();
 
   const [errors, setErrors] = useState({});
 
-  const getToday = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+  const today = (() => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
+  })();
+
+  const handleStartDateChange = (value) => {
+    const updatedEndDate =
+      endDate && endDate > value ? endDate : "";
+
+    updateTravelDates(value, updatedEndDate);
+    setErrors({});
   };
 
-  const today = getToday();
-
-  const validateDates = () => {
-    const newErrors = {};
-
-    if (!cart || cart.length === 0) {
-      newErrors.package =
-        "Please select a travel package first.";
-    }
-
-    if (!startDate) {
-      newErrors.startDate =
-        "Travel start date is required.";
-    } else if (startDate < today) {
-      newErrors.startDate =
-        "Start date cannot be in the past.";
-    }
-
-    if (!endDate) {
-      newErrors.endDate =
-        "Travel end date is required.";
-    } else if (endDate < today) {
-      newErrors.endDate =
-        "End date cannot be in the past.";
-    }
-
-    if (
-      startDate &&
-      endDate &&
-      endDate <= startDate
-    ) {
-      newErrors.endDate =
-        "End date must be after the start date.";
-    }
-
-    setErrors(newErrors);
-
-    return Object.keys(newErrors).length === 0;
+  const handleEndDateChange = (value) => {
+    updateTravelDates(startDate, value);
+    setErrors({});
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!validateDates()) {
+    const newErrors = {};
+
+    if (!cartItems || cartItems.length === 0) {
+      newErrors.package = "Please select a travel package first.";
+    }
+
+    if (!startDate) {
+      newErrors.startDate = "Please select your travel start date.";
+    } else if (startDate < today) {
+      newErrors.startDate = "Start date cannot be in the past.";
+    }
+
+    if (!endDate) {
+      newErrors.endDate = "Please select your travel end date.";
+    } else if (endDate <= today) {
+      newErrors.endDate = "End date must be in the future.";
+    }
+
+    if (startDate && endDate && endDate <= startDate) {
+      newErrors.endDate = "End date must be after the start date.";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
       return;
     }
 
@@ -74,81 +71,96 @@ function BookingDates() {
   };
 
   return (
-    <div className="section">
-      <h1>📅 Select Travel Dates</h1>
+    <main className="section">
+      <h1 tabIndex="-1">📅 Select Travel Dates</h1>
 
-      {errors.package && (
-        <p className="error">{errors.package}</p>
-      )}
+      <div role="alert" aria-live="assertive">
+        {errors.package && (
+          <p className="error">{errors.package}</p>
+        )}
+      </div>
 
-      {cart && cart.length > 0 && (
-        <div className="selected-package">
-          <h3>Selected Package</h3>
+      {cartItems && cartItems.length > 0 && (
+        <section
+          className="selected-package"
+          aria-labelledby="selected-package-heading"
+        >
+          <h2 id="selected-package-heading">Selected Package</h2>
 
-          {cart.map((item) => (
-            <p key={item.id}>
-              🌍 {item.name}
-            </p>
+          {cartItems.map((item) => (
+            <p key={item.id}>🌍 {item.name}</p>
           ))}
-        </div>
+        </section>
       )}
 
       <form
         className="traveler-form"
         onSubmit={handleSubmit}
+        noValidate
       >
         <div className="form-group">
-          <label>Travel Start Date</label>
+          <label htmlFor="startDate">Travel Start Date</label>
 
           <input
+            id="startDate"
+            name="startDate"
             type="date"
             value={startDate || ""}
             min={today}
-            onChange={(e) =>
-              updateTravelDates(
-                e.target.value,
-                endDate
-              )
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errors.startDate)}
+            aria-describedby={
+              errors.startDate ? "startDate-error" : "startDate-help"
             }
+            onChange={(e) => handleStartDateChange(e.target.value)}
           />
 
+          <p id="startDate-help" className="form-help">
+            Choose today or a future date.
+          </p>
+
           {errors.startDate && (
-            <p className="error">
+            <p id="startDate-error" className="error" role="alert">
               {errors.startDate}
             </p>
           )}
         </div>
 
         <div className="form-group">
-          <label>Travel End Date</label>
+          <label htmlFor="endDate">Travel End Date</label>
 
           <input
+            id="endDate"
+            name="endDate"
             type="date"
             value={endDate || ""}
             min={startDate || today}
-            onChange={(e) =>
-              updateTravelDates(
-                startDate,
-                e.target.value
-              )
+            required
+            aria-required="true"
+            aria-invalid={Boolean(errors.endDate)}
+            aria-describedby={
+              errors.endDate ? "endDate-error" : "endDate-help"
             }
+            onChange={(e) => handleEndDateChange(e.target.value)}
           />
 
+          <p id="endDate-help" className="form-help">
+            Choose a date after your start date.
+          </p>
+
           {errors.endDate && (
-            <p className="error">
+            <p id="endDate-error" className="error" role="alert">
               {errors.endDate}
             </p>
           )}
         </div>
 
-        <button
-          type="submit"
-          className="login-button"
-        >
+        <button type="submit" className="login-button">
           Continue to Traveler Details →
         </button>
       </form>
-    </div>
+    </main>
   );
 }
 

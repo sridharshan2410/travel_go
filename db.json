@@ -1,7 +1,16 @@
 {
+  "users": [
+    {
+      "name": "student",
+      "email": "student2@gmail.com",
+      "phone": "1234567890",
+      "password": "123456",
+      "id": "oF6ZdZBCTHM"
+    }
+  ],
   "packages": [
     {
-      "id": 101,
+      "id": "101",
       "name": "Goa Beach Escape",
       "destination": "Goa",
       "duration": 3,
@@ -11,7 +20,7 @@
       "image": "/images/goa.jpg"
     },
     {
-      "id": 102,
+      "id": "102",
       "name": "Ooty Hill Station",
       "destination": "Ooty",
       "duration": 4,
@@ -21,7 +30,7 @@
       "image": "/images/ooty.jpg"
     },
     {
-      "id": 103,
+      "id": "103",
       "name": "Kerala Backwaters",
       "destination": "Kerala",
       "duration": 5,
@@ -31,7 +40,7 @@
       "image": "/images/kerala.jpg"
     },
     {
-      "id": 104,
+      "id": "104",
       "name": "Manali Adventure",
       "destination": "Manali",
       "duration": 6,
@@ -40,5 +49,7 @@
       "availability": 6,
       "image": "/images/manali.jpg"
     }
-  ]
+  ],
+  "bookings": [],
+  "$schema": "./node_modules/json-server/schema.json"
 }

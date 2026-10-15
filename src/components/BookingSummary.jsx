@@ -1,7 +1,18 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useBookingContext } from "../context/BookingContext";
-import TravelerCard from "../components/TravelerCard";
+import TravelerCard from "./TravelerCard";
+
+function formatDate(dateString) {
+  if (!dateString) return "Not selected";
+
+  // Avoid timezone shifts when displaying YYYY-MM-DD.
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return dateString;
+
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
 
 function BookingSummary() {
   const navigate = useNavigate();
@@ -9,21 +20,18 @@ function BookingSummary() {
   const {
     cartItems,
     traveler,
-
-    // Booking details
     travelers,
     startDate,
     endDate,
-    tripDuration,
-
-    // Redux cart values
     subtotal,
     tax,
     total
   } = useBookingContext();
 
+  const hasPackage = Array.isArray(cartItems) && cartItems.length > 0;
+
   const handleContinue = () => {
-    if (!cartItems || cartItems.length === 0) {
+    if (!hasPackage) {
       alert("Please select a travel package.");
       navigate("/packages");
       return;
@@ -35,8 +43,10 @@ function BookingSummary() {
       return;
     }
 
-    if (!traveler || !traveler.name) {
-      alert("Please enter traveler information.");
+    if (!traveler?.name?.trim() ||
+        !traveler?.email?.trim() ||
+        !traveler?.phone?.trim()) {
+      alert("Please complete traveler information.");
       navigate("/booking/travelers");
       return;
     }
@@ -44,204 +54,139 @@ function BookingSummary() {
     navigate("/booking/payment");
   };
 
+  const calculatedDuration =
+    startDate && endDate
+      ? Math.round(
+          (new Date(`${endDate}T12:00:00`) -
+            new Date(`${startDate}T12:00:00`)) /
+            (1000 * 60 * 60 * 24)
+        )
+      : 0;
+
   return (
     <div className="section">
-
       <h1>📋 Booking Summary</h1>
 
-
-      {/* Package Information */}
-
+      {/* Selected Package */}
       <div className="summary-card">
-
         <h2>🌍 Selected Package</h2>
 
-        {cartItems && cartItems.length > 0 ? (
-
+        {hasPackage ? (
           cartItems.map((item) => (
-
-            <div
-              className="summary-package"
-              key={item.id}
-            >
-
-              <h3>
-                {item.name}
-              </h3>
+            <div className="summary-package" key={item.id}>
+              <h3>{item.name}</h3>
 
               <p>
-                <strong>
-                  Destination:
-                </strong>{" "}
-                {item.destination}
+                <strong>Destination:</strong>{" "}
+                {item.destination || "Not specified"}
               </p>
 
               <p>
-                <strong>
-                  Duration:
-                </strong>{" "}
-                {item.duration} Days
+                <strong>Package Duration:</strong>{" "}
+                {item.duration ?? "Not specified"}{" "}
+                {item.duration ? "Days" : ""}
               </p>
 
               <p>
-                <strong>
-                  Quantity:
-                </strong>{" "}
-                {item.quantity}
+                <strong>Quantity:</strong> {item.quantity ?? 1}
               </p>
 
               <p>
-                <strong>
-                  Price:
-                </strong>{" "}
-                ₹
-                {Number(
-                  item.price
-                ).toLocaleString("en-IN")}
+                <strong>Price:</strong>{" "}
+                ₹{Number(item.price || 0).toLocaleString("en-IN")}
               </p>
-
             </div>
-
           ))
-
         ) : (
-
-          <p className="error">
-            No package selected.
-          </p>
-
+          <div>
+            <p className="error">No package selected.</p>
+            <button
+              type="button"
+              className="login-button"
+              onClick={() => navigate("/packages")}
+            >
+              Select a Package
+            </button>
+          </div>
         )}
-
       </div>
 
-
       {/* Travel Dates */}
-
       <div className="summary-card">
-
         <h2>📅 Travel Details</h2>
 
         <p>
-          <strong>
-            Start Date:
-          </strong>{" "}
-          {startDate || "Not selected"}
+          <strong>Start Date:</strong> {formatDate(startDate)}
         </p>
 
         <p>
-          <strong>
-            End Date:
-          </strong>{" "}
-          {endDate || "Not selected"}
+          <strong>End Date:</strong> {formatDate(endDate)}
         </p>
 
         <p>
-          <strong>
-            Trip Duration:
-          </strong>{" "}
-          {tripDuration || 0} day(s)
+          <strong>Trip Duration:</strong> {calculatedDuration} day(s)
         </p>
 
         <p>
-          <strong>
-            Number of Travelers:
-          </strong>{" "}
-          {travelers || 0}
+          <strong>Number of Travelers:</strong> {travelers || 1}
         </p>
-
       </div>
 
-
       {/* Traveler Information */}
-
-      <TravelerCard
-        traveler={traveler}
-        travelers={travelers}
-      />
-
+      <div className="summary-card">
+        <h2>👤 Traveler Information</h2>
+        <TravelerCard
+          traveler={traveler}
+          travelers={travelers || 1}
+        />
+      </div>
 
       {/* Price Summary */}
-
       <div className="summary-card">
-
         <h2>💰 Price Summary</h2>
 
         <div className="price-row">
-
+          <span>Package Cost</span>
           <span>
-            Package Cost
+            ₹{Number(subtotal || 0).toLocaleString("en-IN")}
           </span>
-
-          <span>
-            ₹
-            {Number(
-              subtotal
-            ).toLocaleString("en-IN")}
-          </span>
-
         </div>
-
 
         <div className="price-row">
-
+          <span>Taxes (18%)</span>
           <span>
-            Taxes (18%)
+            ₹{Number(tax || 0).toLocaleString("en-IN")}
           </span>
-
-          <span>
-            ₹
-            {Number(
-              tax
-            ).toLocaleString("en-IN")}
-          </span>
-
         </div>
-
 
         <hr />
 
-
         <div className="price-row total-row">
-
+          <strong>Total Amount</strong>
           <strong>
-            Total Amount
+            ₹{Number(total || 0).toLocaleString("en-IN")}
           </strong>
-
-          <strong>
-            ₹
-            {Number(
-              total
-            ).toLocaleString("en-IN")}
-          </strong>
-
         </div>
-
       </div>
 
-
-      {/* Continue Button */}
-
+      {/* Actions */}
       <div className="summary-actions">
-
         <button
+          type="button"
           className="back-button"
-          onClick={() =>
-            navigate("/booking/travelers")
-          }
+          onClick={() => navigate("/booking/travelers")}
         >
           ← Back
         </button>
 
-
         <button
+          type="button"
           className="login-button"
           onClick={handleContinue}
         >
           Continue to Payment →
         </button>
-
       </div>
-
     </div>
   );
 }

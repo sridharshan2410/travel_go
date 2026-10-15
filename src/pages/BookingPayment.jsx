@@ -1,35 +1,39 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBookingContext } from "../context/BookingContext";
+import { addBooking } from "../services/api";
 
 function BookingPayment() {
   const navigate = useNavigate();
 
   const {
-    cart,
+    cartItems,
     traveler,
     startDate,
     endDate,
     travelers,
-    finalAmount
+    total,
   } = useBookingContext();
 
   const [paymentMethod, setPaymentMethod] = useState("");
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const validatePayment = () => {
     const newErrors = {};
 
-    if (!cart || cart.length === 0) {
+    if (!cartItems || cartItems.length === 0) {
       newErrors.package = "Please select a travel package.";
     }
 
-    if (!traveler.name.trim()) {
+    if (!traveler || !traveler.name?.trim()) {
       newErrors.traveler = "Traveler information is required.";
     }
 
     if (!startDate || !endDate) {
       newErrors.date = "Travel dates are required.";
+    } else if (endDate <= startDate) {
+      newErrors.date = "Travel end date must be after the start date.";
     }
 
     if (!paymentMethod) {
@@ -37,199 +41,174 @@ function BookingPayment() {
     }
 
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePayment = (e) => {
+  const handlePayment = async (e) => {
     e.preventDefault();
 
-    if (!validatePayment()) {
-      return;
+    if (loading || !validatePayment()) return;
+
+    try {
+      setLoading(true);
+      setErrors({});
+
+      const newBooking = {
+        bookingId: "TG" + Date.now(),
+        package: cartItems.map((item) => ({ ...item })),
+        traveler: {
+          name: traveler.name,
+          email: traveler.email,
+          phone: traveler.phone,
+        },
+        startDate,
+        endDate,
+        travelers: travelers || 1,
+        amount: total || 0,
+        paymentMethod,
+        status: "Confirmed",
+        bookingDate: new Date().toLocaleDateString("en-IN"),
+      };
+
+      const savedBooking = await addBooking(newBooking);
+
+      const savedBookings = JSON.parse(
+        localStorage.getItem("travelBookings") || "[]"
+      );
+
+      savedBookings.push(savedBooking);
+
+      localStorage.setItem(
+        "travelBookings",
+        JSON.stringify(savedBookings)
+      );
+
+      navigate("/checkout", {
+        state: { booking: savedBooking },
+      });
+    } catch (error) {
+      console.error("Booking API Error:", error);
+
+      setErrors({
+        api: error.message || "Failed to create booking. Please try again.",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    // Get existing bookings
-    const existingBookings = JSON.parse(
-      localStorage.getItem("travelBookings") || "[]"
-    );
-
-    // Create new booking
-    const newBooking = {
-      bookingId: "TG" + Date.now(),
-
-      package: cart,
-
-      traveler: {
-        name: traveler.name,
-        email: traveler.email,
-        phone: traveler.phone
-      },
-
-      startDate: startDate,
-      endDate: endDate,
-
-      travelers: travelers || 1,
-
-      amount: finalAmount || 0,
-
-      paymentMethod: paymentMethod,
-
-      status: "Confirmed",
-
-      bookingDate: new Date().toLocaleDateString("en-IN")
-    };
-
-    // Save booking
-    existingBookings.push(newBooking);
-
-    localStorage.setItem(
-      "travelBookings",
-      JSON.stringify(existingBookings)
-    );
-
-    // Go to checkout / confirmation page
-    navigate("/checkout");
   };
 
   return (
-    <div className="section">
+    <main className="section">
+      <h1>💳 Payment and Booking Confirmation</h1>
 
-      <h1>💳 Payment</h1>
+      <section
+        className="traveler-form"
+        aria-labelledby="booking-details-heading"
+      >
+        <h2 id="booking-details-heading">📋 Booking Details</h2>
 
-      <div className="traveler-form">
+        {cartItems?.length > 0 && (
+          <section
+            className="selected-package"
+            aria-labelledby="selected-package-heading"
+          >
+            <h3 id="selected-package-heading">🌍 Selected Package</h3>
 
-        <h2>📋 Booking Details</h2>
-
-        {cart && cart.length > 0 && (
-          <div className="selected-package">
-
-            <h3>🌍 Selected Package</h3>
-
-            {cart.map((item) => (
-              <div key={item.id}>
+            {cartItems.map((item, index) => (
+              <div key={item.id || item.packageId || index}>
+                <p><strong>{item.name}</strong></p>
+                <p>📍 {item.destination || item.name}</p>
+                <p>🗓️ {item.duration} Days</p>
                 <p>
-                  <strong>{item.name}</strong>
-                </p>
-
-                <p>
-                  📍 {item.destination || item.name}
-                </p>
-
-                <p>
-                  🗓️ {item.duration} Days
-                </p>
-
-                <p>
-                  💰 ₹
-                  {Number(item.price).toLocaleString("en-IN")}
+                  💰 ₹{Number(item.price || 0).toLocaleString("en-IN")}
                 </p>
               </div>
             ))}
-
-          </div>
+          </section>
         )}
 
         <div className="booking-info">
-
           <p>
             <strong>👤 Traveler:</strong>{" "}
-            {traveler.name || "Not provided"}
+            {traveler?.name || "Not provided"}
           </p>
-
           <p>
             <strong>📅 Travel Dates:</strong>{" "}
             {startDate || "-"} to {endDate || "-"}
           </p>
-
           <p>
-            <strong>👥 Travelers:</strong>{" "}
-            {travelers || 1}
+            <strong>👥 Travelers:</strong> {travelers || 1}
           </p>
-
         </div>
 
         <h2>
           💰 Total Amount: ₹
-          {Number(finalAmount || 0).toLocaleString("en-IN")}
+          {Number(total || 0).toLocaleString("en-IN")}
         </h2>
 
-        {/* Validation Errors */}
+        <div role="alert" aria-live="assertive">
+          {errors.package && <p className="error">{errors.package}</p>}
+          {errors.traveler && <p className="error">{errors.traveler}</p>}
+          {errors.date && <p className="error">{errors.date}</p>}
+          {errors.api && <p className="error">{errors.api}</p>}
+        </div>
 
-        {errors.package && (
-          <p className="error">
-            {errors.package}
-          </p>
-        )}
-
-        {errors.traveler && (
-          <p className="error">
-            {errors.traveler}
-          </p>
-        )}
-
-        {errors.date && (
-          <p className="error">
-            {errors.date}
-          </p>
-        )}
-
-        <form onSubmit={handlePayment}>
-
+        <form onSubmit={handlePayment} aria-busy={loading}>
           <div className="form-group">
-
-            <label>
-              💳 Payment Method
-            </label>
+            <label htmlFor="paymentMethod">💳 Payment Method</label>
 
             <select
+              id="paymentMethod"
+              name="paymentMethod"
               value={paymentMethod}
-              onChange={(e) =>
-                setPaymentMethod(e.target.value)
+              onChange={(e) => {
+                setPaymentMethod(e.target.value);
+                setErrors((previous) => ({
+                  ...previous,
+                  payment: "",
+                }));
+              }}
+              required
+              aria-required="true"
+              aria-invalid={Boolean(errors.payment)}
+              aria-describedby={
+                errors.payment ? "paymentMethod-error" : "paymentMethod-help"
               }
+              disabled={loading}
             >
-
-              <option value="">
-                Select Payment Method
-              </option>
-
-              <option value="UPI">
-                UPI
-              </option>
-
-              <option value="Card">
-                Credit / Debit Card
-              </option>
-
-              <option value="Net Banking">
-                Net Banking
-              </option>
-
-              <option value="Cash">
-                Pay at Travel Office
-              </option>
-
+              <option value="">Select Payment Method</option>
+              <option value="UPI">UPI</option>
+              <option value="Card">Credit / Debit Card</option>
+              <option value="Net Banking">Net Banking</option>
+              <option value="Cash">Pay at Travel Office</option>
             </select>
 
+            <p id="paymentMethod-help" className="form-help">
+              Choose how you intend to pay or arrange payment.
+            </p>
+
             {errors.payment && (
-              <p className="error">
+              <p id="paymentMethod-error" className="error" role="alert">
                 {errors.payment}
               </p>
             )}
-
           </div>
 
           <button
             type="submit"
             className="login-button"
+            disabled={loading}
+            aria-disabled={loading}
           >
-            ✅ Confirm Payment
+            {loading ? "Processing booking..." : "Confirm Booking"}
           </button>
 
+          <p role="status" aria-live="polite">
+            {loading ? "Please wait while your booking is saved." : ""}
+          </p>
         </form>
-
-      </div>
-
-    </div>
+      </section>
+    </main>
   );
 }
 

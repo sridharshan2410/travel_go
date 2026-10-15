@@ -1,110 +1,174 @@
+
 import React, {
   createContext,
   useContext,
-  useState
+  useState,
+  useEffect,
 } from "react";
+
+import {
+  createDemoToken,
+  removeToken,
+  hasValidToken,
+} from "../services/auth";
 
 const AuthContext = createContext();
 
+const API_URL = "http://127.0.0.1:3001";
+
 export function AuthProvider({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () =>
+      localStorage.getItem("isLoggedIn") === "true" &&
+      hasValidToken()
+  );
 
-  const [isAuthenticated, setIsAuthenticated] =
-    useState(() => {
-      return localStorage.getItem("isLoggedIn") === "true";
-    });
+  const [loggedUser, setLoggedUser] = useState(
+    () => localStorage.getItem("loggedUser") || ""
+  );
 
-  const [loggedUser, setLoggedUser] =
-    useState(() => {
-      return localStorage.getItem("loggedUser") || "";
-    });
+  // Handle invalid or expired sessions
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      removeToken();
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("loggedUser");
 
+      setIsAuthenticated(false);
+      setLoggedUser("");
+    };
 
-  // =========================
-  // SIGNUP
-  // =========================
+    window.addEventListener(
+      "travelgo:unauthorized",
+      handleUnauthorized
+    );
 
-  const signup = (userData) => {
+    return () => {
+      window.removeEventListener(
+        "travelgo:unauthorized",
+        handleUnauthorized
+      );
+    };
+  }, []);
 
-    const existingUsers =
-      JSON.parse(
+  // SIGNUP: Save a new user through JSON Server
+  const signup = async (userData) => {
+    try {
+      const response = await fetch(`${API_URL}/users`);
+
+      if (!response.ok) {
+        throw new Error("Unable to check registered users.");
+      }
+
+      const users = await response.json();
+      const email = userData.email.trim().toLowerCase();
+
+      const emailExists = users.some(
+        (user) => user.email?.toLowerCase() === email
+      );
+
+      if (emailExists) {
+        return {
+          success: false,
+          message: "Email already registered.",
+        };
+      }
+
+      const createResponse = await fetch(`${API_URL}/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: userData.name.trim(),
+          email,
+          phone: userData.phone.trim(),
+          password: userData.password,
+        }),
+      });
+
+      if (!createResponse.ok) {
+        throw new Error("Unable to create your account.");
+      }
+
+      const savedUser = await createResponse.json();
+
+      // Keep compatibility with the existing demo login flow
+      const existingUsers = JSON.parse(
         localStorage.getItem("travelUsers") || "[]"
       );
 
-    const emailExists = existingUsers.some(
-      (user) =>
-        user.email.toLowerCase() ===
-        userData.email.toLowerCase()
-    );
+      existingUsers.push({
+        name: savedUser.name,
+        email: savedUser.email,
+        phone: savedUser.phone,
+        password: userData.password,
+      });
 
-    if (emailExists) {
+      localStorage.setItem(
+        "travelUsers",
+        JSON.stringify(existingUsers)
+      );
+
+      return {
+        success: true,
+        message: "Account created successfully.",
+      };
+    } catch (error) {
+      console.error("Signup error:", error);
+
       return {
         success: false,
-        message: "Email already registered."
+        message:
+          "Unable to connect to the API. Make sure JSON Server is running.",
       };
     }
-
-    existingUsers.push(userData);
-
-    localStorage.setItem(
-      "travelUsers",
-      JSON.stringify(existingUsers)
-    );
-
-    return {
-      success: true,
-      message: "Account created successfully."
-    };
   };
 
+  // LOGIN: Verify credentials using the JSON Server API
+  const login = async (username, password) => {
+    try {
+      const response = await fetch(`${API_URL}/users`);
 
-  // =========================
-  // LOGIN
-  // =========================
+      if (!response.ok) {
+        throw new Error("Unable to retrieve users from the API.");
+      }
 
-  const login = (username, password) => {
+      const users = await response.json();
+      const enteredUsername = username.trim().toLowerCase();
 
-    const existingUsers =
-      JSON.parse(
-        localStorage.getItem("travelUsers") || "[]"
+      const user = users.find(
+        (item) =>
+          (
+            item.email?.toLowerCase() === enteredUsername ||
+            item.name?.toLowerCase() === enteredUsername
+          ) &&
+          item.password === password
       );
 
-    const user = existingUsers.find(
-      (item) =>
-        (
-          item.email.toLowerCase() ===
-          username.toLowerCase() ||
-          item.name.toLowerCase() ===
-          username.toLowerCase()
-        ) &&
-        item.password === password
-    );
+      if (!user) {
+        return false;
+      }
 
-    if (!user) {
+      // Create the demo token after successful credential verification
+      createDemoToken(user.email);
+
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("loggedUser", user.name);
+
+      setIsAuthenticated(true);
+      setLoggedUser(user.name);
+
+      return true;
+    } catch (error) {
+      console.error("Login error:", error);
       return false;
     }
-
-    localStorage.setItem(
-      "isLoggedIn",
-      "true"
-    );
-
-    localStorage.setItem(
-      "loggedUser",
-      user.name
-    );
-
-    setIsAuthenticated(true);
-    setLoggedUser(user.name);
-
-    return true;
   };
 
-
-  // =========================
-  // LOGOUT
-  // =========================
-
+  // LOGOUT: Remove the token and login details
   const logout = () => {
+    removeToken();
 
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("loggedUser");
@@ -113,7 +177,6 @@ export function AuthProvider({ children }) {
     setLoggedUser("");
   };
 
-
   return (
     <AuthContext.Provider
       value={{
@@ -121,14 +184,13 @@ export function AuthProvider({ children }) {
         loggedUser,
         signup,
         login,
-        logout
+        logout,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
-
 
 export function useAuth() {
   return useContext(AuthContext);
