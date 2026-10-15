@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -58,7 +57,7 @@ export function AuthProvider({ children }) {
       const response = await fetch(`${API_URL}/users`);
 
       if (!response.ok) {
-        throw new Error("Unable to retrieve users.");
+        throw new Error(`Unable to retrieve users: ${response.status}`);
       }
 
       const users = await response.json();
@@ -88,7 +87,9 @@ export function AuthProvider({ children }) {
       });
 
       if (!createResponse.ok) {
-        throw new Error("Unable to create account.");
+        throw new Error(
+          `Unable to create account: ${createResponse.status}`
+        );
       }
 
       return {
@@ -112,7 +113,7 @@ export function AuthProvider({ children }) {
       const response = await fetch(`${API_URL}/users`);
 
       if (!response.ok) {
-        throw new Error("Unable to retrieve users.");
+        throw new Error(`Unable to retrieve users: ${response.status}`);
       }
 
       const users = await response.json();
@@ -127,7 +128,9 @@ export function AuthProvider({ children }) {
           item.password === password
       );
 
-      if (!user) return false;
+      if (!user) {
+        return false;
+      }
 
       createDemoToken(user.email || user.name);
 
