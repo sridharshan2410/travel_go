@@ -1,20 +1,17 @@
-
 import { getToken, removeToken } from "./auth";
 
 const API_URL = (
   import.meta.env.VITE_API_URL || "http://127.0.0.1:3001"
 ).replace(/\/+$/, "");
 
-// Attach authentication token to protected API requests
+// Handle authentication for protected requests
 const authorizedFetch = async (url, options = {}) => {
   const token = getToken();
 
   if (!token) {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("loggedUser");
-
     window.dispatchEvent(new Event("travelgo:unauthorized"));
-
     throw new Error("Session expired. Please log in again.");
   }
 
@@ -26,28 +23,20 @@ const authorizedFetch = async (url, options = {}) => {
     },
   });
 
-  // Handle invalid or expired tokens when the server rejects them
   if (response.status === 401 || response.status === 403) {
     removeToken();
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("loggedUser");
-
     window.dispatchEvent(new Event("travelgo:unauthorized"));
-
-    throw new Error(
-      "Invalid or expired token. Please log in again."
-    );
+    throw new Error("Invalid or expired token. Please log in again.");
   }
 
   return response;
 };
 
-
- // GET - Retrieve all travel packages (public)
+// GET: All travel packages
 export const getPackages = async (signal) => {
-  const response = await fetch(`${API_URL}/packages`, {
-    signal
-  });
+  const response = await fetch(`${API_URL}/packages`, { signal });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch packages: ${response.status}`);
@@ -56,8 +45,7 @@ export const getPackages = async (signal) => {
   return response.json();
 };
 
-
-// GET - Retrieve a travel package by ID (public)
+// GET: One travel package
 export const getPackageById = async (id) => {
   const response = await fetch(`${API_URL}/packages/${id}`);
 
@@ -68,7 +56,7 @@ export const getPackageById = async (id) => {
   return response.json();
 };
 
-// POST - Add a travel package (public for current coursework setup)
+// POST: Add a travel package
 export const addPackage = async (packageData) => {
   const response = await fetch(`${API_URL}/packages`, {
     method: "POST",
@@ -85,7 +73,7 @@ export const addPackage = async (packageData) => {
   return response.json();
 };
 
-// GET - Retrieve booking history (protected)
+// GET: All bookings
 export const getBookings = async () => {
   const response = await authorizedFetch(`${API_URL}/bookings`);
 
@@ -96,11 +84,9 @@ export const getBookings = async () => {
   return response.json();
 };
 
-// GET - Retrieve one booking (protected)
+// GET: One booking
 export const getBookingById = async (id) => {
-  const response = await authorizedFetch(
-    `${API_URL}/bookings/${id}`
-  );
+  const response = await authorizedFetch(`${API_URL}/bookings/${id}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch booking: ${response.status}`);
@@ -109,7 +95,7 @@ export const getBookingById = async (id) => {
   return response.json();
 };
 
-// POST - Create a booking (protected)
+// POST: Create a booking
 export const addBooking = async (bookingData) => {
   const response = await authorizedFetch(`${API_URL}/bookings`, {
     method: "POST",
@@ -126,18 +112,15 @@ export const addBooking = async (bookingData) => {
   return response.json();
 };
 
-// PATCH - Update a booking (protected)
+// PATCH: Update a booking
 export const updateBooking = async (id, bookingData) => {
-  const response = await authorizedFetch(
-    `${API_URL}/bookings/${id}`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bookingData),
-    }
-  );
+  const response = await authorizedFetch(`${API_URL}/bookings/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(bookingData),
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to update booking: ${response.status}`);
@@ -146,14 +129,11 @@ export const updateBooking = async (id, bookingData) => {
   return response.json();
 };
 
-// DELETE - Cancel a booking (protected)
+// DELETE: Cancel a booking
 export const deleteBooking = async (id) => {
-  const response = await authorizedFetch(
-    `${API_URL}/bookings/${id}`,
-    {
-      method: "DELETE",
-    }
-  );
+  const response = await authorizedFetch(`${API_URL}/bookings/${id}`, {
+    method: "DELETE",
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to cancel booking: ${response.status}`);
